@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import warnings
 from typing import Optional, Type, Dict, Any, TYPE_CHECKING
 
 from ravendb.documents.operations.definitions import MaintenanceOperation
@@ -7,7 +8,6 @@ from ravendb.documents.conventions import DocumentConventions
 from ravendb.http.raven_command import RavenCommand
 from ravendb.http.server_node import ServerNode
 import requests
-
 
 if TYPE_CHECKING:
     from ravendb.documents.operations.ai.agents.ai_agent_configuration import AiAgentConfiguration
@@ -28,6 +28,13 @@ class AiAgentConfigurationResult:
 
 class AddOrUpdateAiAgentOperation(MaintenanceOperation[AiAgentConfigurationResult]):
     def __init__(self, configuration: AiAgentConfiguration, schema_type: Type = None):
+        if schema_type is not None:
+            warnings.warn(
+                "The 'schema_type' parameter is deprecated and will be removed in 8.0 version of Python client."
+                " Use 'sample_object' or 'output_schema' inside AiAgentConfiguration instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         if configuration is None:
             raise ValueError("configuration cannot be None")
 

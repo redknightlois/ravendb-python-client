@@ -7,6 +7,7 @@ import requests
 from ravendb import RavenCommand, RaftCommand, ConnectionString, ServerNode
 from ravendb.documents.operations.definitions import MaintenanceOperation
 from ravendb.util.util import RaftIdGenerator
+from ravendb.serverwide.server_operation_executor import ConnectionStringType
 
 
 class RemoveConnectionStringResult:
@@ -17,7 +18,7 @@ class RemoveConnectionStringResult:
         return {"RaftCommandIndex": self.raft_command_index}
 
     @classmethod
-    def from_json(cls, json_dict: Dict) -> "PutConnectionStringResult":
+    def from_json(cls, json_dict: Dict) -> "RemoveConnectionStringResult":
         return cls(json_dict["RaftCommandIndex"])
 
 
@@ -25,7 +26,7 @@ class RemoveConnectionStringOperation(MaintenanceOperation[RemoveConnectionStrin
     def __init__(self, connection_string: ConnectionString = None):
         self._connection_string = connection_string
 
-    def get_command(self, conventions: "DocumentConventions") -> "RavenCommand[_T]":
+    def get_command(self, conventions: "DocumentConventions") -> "RavenCommand[RemoveConnectionStringResult]":
         return self.RemoveConnectionStringCommand(self._connection_string)
 
     class RemoveConnectionStringCommand(RavenCommand[RemoveConnectionStringResult], RaftCommand):

@@ -80,15 +80,17 @@ from ravendb.documents.operations.connection_strings import ConnectionString
 # AI Operations
 from ravendb.documents.ai import (
     AiOperations,
-    IAiConversationOperations,
     AiConversation,
     AiConversationResult,
-    AiAgentParametersBuilder,
-    IAiAgentParametersBuilder,
+    ContentPart,
+    TextPart,
+    AiMessagePromptFields,
+    AiMessagePromptTypes,
 )
 from ravendb.documents.operations.ai.agents import (
     AiAgentConfiguration,
     AiAgentConfigurationResult,
+    AiAgentParameter,
     AiAgentToolAction,
     AiAgentToolQuery,
     AiAgentPersistenceConfiguration,
@@ -100,11 +102,22 @@ from ravendb.documents.operations.ai.agents import (
     ConversationResult,
     AiAgentActionRequest,
     AiAgentActionResponse,
+    AiAgentArtificialActionResponse,
     AiUsage,
+    AiConversationCreationOptions,
     GetAiAgentOperation,
     GetAiAgentsResponse,
     AddOrUpdateAiAgentOperation,
     DeleteAiAgentOperation,
+)
+from ravendb.documents.operations.ai import (
+    ChunkingOptions,
+    ChunkingMethod,
+    EmbeddingPathConfiguration,
+    EmbeddingsTransformation,
+    EmbeddingsGenerationConfiguration,
+    AddEmbeddingsGenerationOperation,
+    UpdateEmbeddingsGenerationOperation,
 )
 
 from ravendb.documents.operations.etl.configuration import EtlConfiguration, RavenEtlConfiguration

@@ -58,6 +58,7 @@ from ravendb.documents.operations.attachments import (
     GetAttachmentOperation,
     AttachmentName,
     CloseableAttachmentResult,
+    StoreAttachmentParameters,
 )
 from ravendb.documents.operations.batch import BatchOperation
 from ravendb.documents.operations.executor import OperationExecutor, SessionOperationExecutor
@@ -668,6 +669,16 @@ class DocumentSession(InMemoryDocumentSessionOperations):
             if document_info is None:
                 return False
 
+            # Ensure metadata modifications performed via advanced.get_metadata_for(...)
+            # are reflected before diffing, so metadata-only changes are detected.
+            try:
+                from ravendb.documents.session.document_session_operations.misc import _update_metadata_modifications
+
+                _update_metadata_modifications(document_info.metadata_instance, document_info.metadata)
+            except Exception:
+                # Be conservative: if helper import fails for any reason, proceed without blocking
+                pass
+
             document = self._session.entity_to_json.convert_entity_to_json(entity, document_info)
             return self._session._entity_changed(document, document_info, None)
 
@@ -1243,6 +1254,31 @@ class DocumentSession(InMemoryDocumentSessionOperations):
                 content_type: str = None,
                 change_vector: str = None,
             ):
+                self._store_internal(entity_or_document_id, name, stream, content_type, change_vector)
+
+            def store_with_parameters(
+                self,
+                entity_or_document_id: Union[object, str],
+                parameters: StoreAttachmentParameters,
+            ):
+                self._store_internal(
+                    entity_or_document_id,
+                    parameters.name,
+                    parameters.stream,
+                    parameters.content_type,
+                    parameters.change_vector,
+                    parameters.remote_parameters,
+                )
+
+            def _store_internal(
+                self,
+                entity_or_document_id: Union[object, str],
+                name: str,
+                stream: bytes,
+                content_type: str = None,
+                change_vector: str = None,
+                remote_parameters: Optional["RemoteAttachmentParameters"] = None,
+            ):
                 if not isinstance(entity_or_document_id, str):
                     entity = self.__session._documents_by_entity.get(entity_or_document_id, None)
                     if not entity:
@@ -1288,7 +1324,9 @@ class DocumentSession(InMemoryDocumentSessionOperations):
                     )
 
                 self.__session.defer(
-                    PutAttachmentCommandData(entity_or_document_id, name, stream, content_type, change_vector)
+                    PutAttachmentCommandData(
+                        entity_or_document_id, name, stream, content_type, change_vector, remote_parameters
+                    )
                 )
 
             def delete(self, entity_or_document_id, name):

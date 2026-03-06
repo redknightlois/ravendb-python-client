@@ -1,14 +1,17 @@
 from .ai_operations import AiOperations
-from .ai_conversation_operations import IAiConversationOperations
 from .ai_conversation import AiConversation
 from .ai_conversation_result import AiConversationResult
-from .ai_agent_parameters_builder import AiAgentParametersBuilder, IAiAgentParametersBuilder
+from .ai_answer import AiAnswer, AiConversationStatus
+from .content_part import ContentPart, TextPart, AiMessagePromptFields, AiMessagePromptTypes
 
 __all__ = [
     "AiOperations",
-    "IAiConversationOperations",
     "AiConversation",
     "AiConversationResult",
-    "AiAgentParametersBuilder",
-    "IAiAgentParametersBuilder",
+    "AiAnswer",
+    "AiConversationStatus",
+    "ContentPart",
+    "TextPart",
+    "AiMessagePromptFields",
+    "AiMessagePromptTypes",
 ]

@@ -12,6 +12,18 @@ class BackupType(Enum):
     SNAPSHOT = "Snapshot"
 
 
+class S3StorageClass(Enum):
+    DEEP_ARCHIVE = "DeepArchive"
+    GLACIER = "Glacier"
+    GLACIER_INSTANT_RETRIEVAL = "GlacierInstantRetrieval"
+    INTELLIGENT_TIERING = "IntelligentTiering"
+    ONE_ZONE_INFREQUENT_ACCESS = "OneZoneInfrequentAccess"
+    REDUCED_REDUNDANCY = "ReducedRedundancy"
+    STANDARD = "Standard"
+    STANDARD_INFREQUENT_ACCESS = "StandardInfrequentAccess"
+    EXPRESS_ONE_ZONE = "ExpressOneZone"
+
+
 class CompressionLevel(Enum):
     OPTIMAL = "Optimal"
     FASTEST = "Fastest"
@@ -68,14 +80,20 @@ class LocalSettings(BackupSettings):
     def from_json(cls, json_dict: Dict[str, Any]) -> LocalSettings:
         return cls(
             json_dict["Disabled"],
-            GetBackupConfigurationScript.from_json(json_dict["GetBackupConfigurationScript"]),
+            (
+                GetBackupConfigurationScript.from_json(json_dict["GetBackupConfigurationScript"])
+                if json_dict["GetBackupConfigurationScript"]
+                else None
+            ),
             json_dict["FolderPath"],
         )
 
     def to_json(self) -> Dict[str, Any]:
         return {
             "Disabled": self.disabled,
-            "GetBackupConfigurationScript": self.get_backup_configuration_script.to_json(),
+            "GetBackupConfigurationScript": (
+                self.get_backup_configuration_script.to_json() if self.get_backup_configuration_script else None
+            ),
             "FolderPath": self.folder_path,
         }
 

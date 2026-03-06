@@ -177,14 +177,14 @@ class DocumentsByEntityHolder(object):
             try:
                 return item in self.__documents_by_entity_hashable
             except TypeError as e:
-                if str(e.args[0]).startswith("unhashable type"):
+                if "unhashable type" in str(e.args[0]):
                     return item in self.__documents_by_entity_unhashable
                 raise e
         self.__create_on_before_store_documents_by_entity_if_needed()
         try:
             return item in self.__on_before_store_documents_by_entity_hashable
         except TypeError as e:
-            if str(e.args[0]).startswith("unhashable type"):
+            if "unhashable type" in str(e.args[0]):
                 return item in self.__documents_by_entity_unhashable
             raise e
 
@@ -193,7 +193,7 @@ class DocumentsByEntityHolder(object):
             try:
                 self.__documents_by_entity_hashable[key] = value
             except TypeError as e:
-                if str(e.args[0]).startswith("unhashable type"):
+                if "unhashable type" in str(e.args[0]):
                     self.__documents_by_entity_unhashable[key] = value
                     return
                 raise e
@@ -202,7 +202,7 @@ class DocumentsByEntityHolder(object):
         try:
             self.__on_before_store_documents_by_entity_hashable[key] = value
         except TypeError as e:
-            if str(e.args[0]).startswith("unhashable type"):
+            if "unhashable type" in str(e.args[0]):
                 self.__on_before_store_documents_by_entity_unhashable[key] = value
                 return
             raise e
@@ -1166,6 +1166,9 @@ class InMemoryDocumentSessionOperations:
     def has_changes(self) -> bool:
         for entity in self._documents_by_entity:
             entity: DocumentsByEntityHolder.DocumentsByEntityEnumeratorResult
+            # Ensure metadata modifications done via advanced.get_metadata_for(...)
+            # are reflected before diffing, so metadata-only changes are detected.
+            _update_metadata_modifications(entity.value.metadata_instance, entity.value.metadata)
             document = self.entity_to_json.convert_entity_to_json(entity.key, entity.value)
             if self._entity_changed(document, entity.value, None):
                 return True
@@ -1833,7 +1836,7 @@ class InMemoryDocumentSessionOperations:
         if not is_collection and not is_index:
             collection_name = conventions.get_collection_name(object_type)
             collection_name = (
-                collection_name if collection_name else constants.Documents.Metadata.ALL_DOCUMENTS_COLLECTION
+                collection_name if collection_name else constants.Documents.Collections.ALL_DOCUMENTS_COLLECTION
             )
 
         return index_name, collection_name

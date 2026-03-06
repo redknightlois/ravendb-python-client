@@ -1,5 +1,48 @@
 from __future__ import annotations
-from typing import List, Set, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
+
+
+class AiAgentParameter:
+    """
+    Represents a parameter for an AI agent configuration.
+    Parameters can be used to pass values to the agent's system prompt.
+    """
+
+    def __init__(
+        self,
+        name: str = None,
+        description: str = None,
+        send_to_model: bool = None,
+    ):
+        """
+        Initialize an agent parameter.
+
+        Args:
+            name: The parameter name. Cannot be null or empty.
+            description: A human-readable description. May be null or empty.
+            send_to_model: When False, the parameter is hidden from the model
+                          (it will not be included in prompts/echo messages).
+                          When True, the parameter is exposed to the model.
+                          If None (default), treated as exposed.
+        """
+        self.name = name
+        self.description: Optional[str] = description
+        self.send_to_model: Optional[bool] = send_to_model
+
+    def to_json(self) -> Dict[str, Any]:
+        return {
+            "Name": self.name,
+            "Description": self.description,
+            "SendToModel": self.send_to_model,
+        }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict[str, Any]) -> AiAgentParameter:
+        return cls(
+            name=json_dict.get("name") or json_dict.get("Name"),
+            description=json_dict.get("description") or json_dict.get("Description"),
+            send_to_model=json_dict.get("sendToModel") if "sendToModel" in json_dict else json_dict.get("SendToModel"),
+        )
 
 
 class AiAgentToolQuery:
@@ -10,21 +53,34 @@ class AiAgentToolQuery:
     and its results provided back to the model.
     """
 
-    def __init__(self, name: str = None, description: str = None, query: str = None):
+    def __init__(
+        self,
+        name: str = None,
+        description: str = None,
+        query: str = None,
+        parameters_sample_object: str = None,
+        parameters_schema: str = None,
+        options: AiAgentToolQueryOptions = None,
+    ):
         self.name = name
         self.description = description
         self.query = query
-        self.parameters_sample_object: Optional[str] = None
-        self.parameters_schema: Optional[str] = None
+        self.parameters_sample_object: Optional[str] = parameters_sample_object
+        self.parameters_schema: Optional[str] = parameters_schema
+        self.options = options
 
     def to_json(self) -> Dict[str, Any]:
-        return {
+        json_dict = {
             "Name": self.name,
             "Description": self.description,
             "Query": self.query,
             "ParametersSampleObject": self.parameters_sample_object,
             "ParametersSchema": self.parameters_schema,
         }
+        if self.options:
+            json_dict["Options"] = self.options.to_json()
+
+        return json_dict
 
     @classmethod
     def from_json(cls, json_dict: Dict[str, Any]) -> AiAgentToolQuery:
@@ -36,6 +92,8 @@ class AiAgentToolQuery:
             "ParametersSampleObject"
         )
         instance.parameters_schema = json_dict.get("parametersSchema") or json_dict.get("ParametersSchema")
+        if options := json_dict.get("Options"):
+            instance.options = AiAgentToolQueryOptions.from_json(options)
         return instance
 
 
@@ -46,11 +104,17 @@ class AiAgentToolAction:
     Tool actions represent external functions whose results are provided by the user
     """
 
-    def __init__(self, name: str = None, description: str = None):
+    def __init__(
+        self,
+        name: str = None,
+        description: str = None,
+        parameters_sample_object: str = None,
+        parameters_schema: str = None,
+    ):
         self.name = name
         self.description = description
-        self.parameters_sample_object: Optional[str] = None
-        self.parameters_schema: Optional[str] = None
+        self.parameters_sample_object: Optional[str] = parameters_sample_object
+        self.parameters_schema: Optional[str] = parameters_schema
 
     def to_json(self) -> Dict[str, Any]:
         return {
@@ -105,12 +169,21 @@ class AiAgentSummarizationByTokens:
 
     DEFAULT_MAX_TOKENS_BEFORE_SUMMARIZATION = 32 * 1024
 
-    def __init__(self):
-        self.summarization_task_beginning_prompt: Optional[str] = None
-        self.summarization_task_end_prompt: Optional[str] = None
-        self.result_prefix: Optional[str] = None
-        self.max_tokens_before_summarization: int = self.DEFAULT_MAX_TOKENS_BEFORE_SUMMARIZATION
-        self.max_tokens_after_summarization: int = 1024
+    def __init__(
+        self,
+        summarization_task_beginning_prompt: str = None,
+        summarization_task_end_prompt: str = None,
+        result_prefix: str = None,
+        max_tokens_before_summarization: int = None,
+        max_tokens_after_summarization: int = None,
+    ):
+        self.summarization_task_beginning_prompt: Optional[str] = summarization_task_beginning_prompt
+        self.summarization_task_end_prompt: Optional[str] = summarization_task_end_prompt
+        self.result_prefix: Optional[str] = result_prefix
+        self.max_tokens_before_summarization: int = (
+            max_tokens_before_summarization or self.DEFAULT_MAX_TOKENS_BEFORE_SUMMARIZATION
+        )
+        self.max_tokens_after_summarization: int = max_tokens_after_summarization or 1024
 
     def to_json(self) -> Dict[str, Any]:
         return {
@@ -141,9 +214,13 @@ class AiAgentTruncateChat:
 
     DEFAULT_MESSAGES_LENGTH_BEFORE_TRUNCATE = 500
 
-    def __init__(self):
-        self.messages_length_before_truncate: int = self.DEFAULT_MESSAGES_LENGTH_BEFORE_TRUNCATE
-        self.messages_length_after_truncate: int = self.DEFAULT_MESSAGES_LENGTH_BEFORE_TRUNCATE // 2
+    def __init__(self, messages_length_before_truncate: int = None, messages_length_after_truncate: int = None):
+        self.messages_length_before_truncate: int = (
+            messages_length_before_truncate or self.DEFAULT_MESSAGES_LENGTH_BEFORE_TRUNCATE
+        )
+        self.messages_length_after_truncate: int = (
+            messages_length_after_truncate or self.DEFAULT_MESSAGES_LENGTH_BEFORE_TRUNCATE // 2
+        )
 
     def to_json(self) -> Dict[str, Any]:
         return {
@@ -168,8 +245,8 @@ class AiAgentHistoryConfiguration:
     Defines the configuration for retention and expiration of AI agent chat history documents.
     """
 
-    def __init__(self):
-        self.history_expiration_in_sec: Optional[int] = None
+    def __init__(self, history_expiration_in_sec: int = None):
+        self.history_expiration_in_sec: Optional[int] = history_expiration_in_sec
 
     def to_json(self) -> Dict[str, Any]:
         return {
@@ -223,24 +300,50 @@ class AiAgentConfiguration:
     tools (queries/actions), output schema, persistence settings, and connection string.
     """
 
-    def __init__(self, name: str = None, connection_string_name: str = None, system_prompt: str = None):
-        self.identifier: Optional[str] = None
+    def __init__(
+        self,
+        name: str = None,
+        connection_string_name: str = None,
+        system_prompt: str = None,
+        identifier: str = None,
+        sample_object: str = None,
+        output_schema: str = None,
+        queries: List[AiAgentToolQuery] = None,
+        actions: List[AiAgentToolAction] = None,
+        persistence: AiAgentPersistenceConfiguration = None,
+        parameters: List[Union[str, AiAgentParameter]] = None,
+        chat_trimming: AiAgentChatTrimmingConfiguration = None,
+        max_model_iterations_per_call: int = None,
+        disabled: bool = False,
+    ):
         self.name = name
         self.connection_string_name = connection_string_name
         self.system_prompt = system_prompt
-        self.sample_object: Optional[str] = None
-        self.output_schema: Optional[str] = None
-        self.queries: List[AiAgentToolQuery] = []
-        self.actions: List[AiAgentToolAction] = []
-        self.persistence: Optional[AiAgentPersistenceConfiguration] = None
-        self.parameters: Set[str] = set()
-        self.chat_trimming: Optional[AiAgentChatTrimmingConfiguration] = None
-        self.max_model_iterations_per_call: Optional[int] = None
+        self.identifier: Optional[str] = identifier
+        self.sample_object: Optional[str] = sample_object
+        self.output_schema: Optional[str] = output_schema
+        self.queries: List[AiAgentToolQuery] = queries or []
+        self.actions: List[AiAgentToolAction] = actions or []
+        self.persistence: Optional[AiAgentPersistenceConfiguration] = persistence
+        self.parameters: List[AiAgentParameter] = self._normalize_parameters(parameters)
+        self.chat_trimming: Optional[AiAgentChatTrimmingConfiguration] = chat_trimming
+        self.max_model_iterations_per_call: Optional[int] = max_model_iterations_per_call
+        self.disabled: bool = disabled
+
+    @staticmethod
+    def _normalize_parameters(parameters: List[Union[str, AiAgentParameter]]) -> List[AiAgentParameter]:
+        """Convert a list of strings or AiAgentParameter objects to a list of AiAgentParameter objects."""
+        if not parameters:
+            return []
+        result = []
+        for param in parameters:
+            if isinstance(param, str):
+                result.append(AiAgentParameter(name=param))
+            else:
+                result.append(param)
+        return result
 
     def to_json(self) -> Dict[str, Any]:
-        # Convert parameters set to list of parameter objects using list comprehension
-        parameters_list = [{"Name": param_name, "Description": None} for param_name in self.parameters]
-
         return {
             "Identifier": self.identifier,
             "Name": self.name,
@@ -251,9 +354,10 @@ class AiAgentConfiguration:
             "Queries": [q.to_json() for q in self.queries],
             "Actions": [a.to_json() for a in self.actions],
             "Persistence": self.persistence.to_json() if self.persistence else None,
-            "Parameters": parameters_list,
+            "Parameters": [p.to_json() for p in self.parameters],
             "ChatTrimming": self.chat_trimming.to_json() if self.chat_trimming else None,
             "MaxModelIterationsPerCall": self.max_model_iterations_per_call,
+            "Disabled": self.disabled,
         }
 
     @classmethod
@@ -281,13 +385,7 @@ class AiAgentConfiguration:
 
         params_data = json_dict.get("parameters") or json_dict.get("Parameters")
         if params_data:
-            # Handle both string list and object list formats
-            if params_data and isinstance(params_data[0], dict):
-                # New format: list of objects with name property
-                instance.parameters = set(param.get("name") or param.get("Name") for param in params_data)
-            else:
-                # Old format: list of strings
-                instance.parameters = set(params_data)
+            instance.parameters = [AiAgentParameter.from_json(param) for param in params_data]
 
         trimming_data = json_dict.get("chatTrimming") or json_dict.get("ChatTrimming")
         if trimming_data:
@@ -296,4 +394,24 @@ class AiAgentConfiguration:
         instance.max_model_iterations_per_call = json_dict.get("maxModelIterationsPerCall") or json_dict.get(
             "MaxModelIterationsPerCall"
         )
+        instance.disabled = json_dict.get("disabled", False) or json_dict.get("Disabled", False)
         return instance
+
+
+class AiAgentToolQueryOptions:
+    def __init__(self, allow_model_queries: bool = None, add_to_initial_context: bool = None):
+        self.allow_model_queries = allow_model_queries
+        self.add_to_initial_context = add_to_initial_context
+
+    def to_json(self) -> Dict[str, Any]:
+        return {
+            "AllowModelQueries": self.allow_model_queries,
+            "AddToInitialContext": self.add_to_initial_context,
+        }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict[str, Any]) -> AiAgentToolQueryOptions:
+        return cls(
+            allow_model_queries=json_dict["AllowModelQueries"],
+            add_to_initial_context=json_dict["AddToInitialContext"],
+        )
